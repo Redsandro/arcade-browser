@@ -1,9 +1,9 @@
 # Arcade Browser - list ROMs and launch command line emulators
-# Copyright (C) 2008-2009 Sander S AKA Redsandro <redsandro@gmail.com> (http://www.Redsandro.com/)
+# Copyright (C) 2008-2010 Sander S AKA Redsandro <redsandro@gmail.com> (http://www.Redsandro.com/)
 #
 # File:		default.py
 # Created:	2008-07-23
-# Updated:	2009-02-30
+# Updated:	2010-01-27
 #
 # Notes:
 # ######
@@ -29,7 +29,7 @@ from xml.dom.minidom import Document, parseString
 # Global constants
 #
 
-VERSION = "0.2b2"			# Version
+VERSION = "0.2b3"			# Version
 INIFILE = "emulators.ini"	# Manually editable emulator file
 XMLFILE = "romlist.xml"		# Cached roms
 DEBUG = 'true'				# Set to true to dispaly script info at the bottom of the screen
@@ -157,14 +157,16 @@ class ArcadeBrowser(xbmcgui.Window):
 			# Defaults:
 			self.emulators[key]['noescape'] = False
 			self.emulators[key]['solo'] = True
+			self.emulators[key]['diskprefix'] = '_Disk'
 			for item in emulator:
-				if   item[0] == "title":	self.emulators[key]['title'] = item[1]
-				elif item[0] == "desc":		self.emulators[key]['desc'] = item[1]
-				elif item[0] == "romdir":	self.emulators[key]['romdir'] = item[1]
-				elif item[0] == "romext":	self.emulators[key]['romext'] = item[1]
-				elif item[0] == "app":		self.emulators[key]['app'] = item[1]
-				elif item[0] == "solo":		self.emulators[key]['solo'] = item[1]
-				elif item[0] == "noescape":	self.emulators[key]['noescape'] = True
+				if   item[0] == "title":		self.emulators[key]['title'] = item[1]
+				elif item[0] == "desc":			self.emulators[key]['desc'] = item[1]
+				elif item[0] == "romdir":		self.emulators[key]['romdir'] = item[1]
+				elif item[0] == "romext":		self.emulators[key]['romext'] = item[1]
+				elif item[0] == "app":			self.emulators[key]['app'] = item[1]
+				elif item[0] == "solo":			self.emulators[key]['solo'] = item[1]
+				elif item[0] == "noescape":		self.emulators[key]['noescape'] = True
+				elif item[0] == "diskprefix":	self.emulators[key]['diskprefix'] = item[1]
 			key+= 1
 		self.note("Parsing "+fileName+"... done.")
 
@@ -242,7 +244,8 @@ class ArcadeBrowser(xbmcgui.Window):
 					#break
 					#return
 				filenum += 1
-				romName = rom.getAttribute('filename')
+				#romName = rom.getAttribute('filename')
+				romName = rom.getAttribute('game')
 				self.romDesc[romName] = roms[filenum-1].firstChild
 				self.lstMain.addItem(xbmcgui.ListItem(romName, str(filenum), "", ""))
 				# These redraws make onAction lag very badly, don't know if the cause was old XBMC or old hardware, I cannot test anymore due to new hardware. You can comment those 2 lines out.
@@ -363,36 +366,92 @@ class ArcadeBrowser(xbmcgui.Window):
 	def bootRom(self):
 		# Prepare command
 		emu = self.emulators[self.selEmu]
-		rom = self.lstMain.getSelectedItem().getLabel()
+		
+		myXml = HOMEDIR+emu['emulator']+'.xml'		
+		if os.path.isfile(myXml):
+			xmlDoc = self.readXml(myXml)
+		
+		game = self.lstMain.getSelectedItem().getLabel()
+		
+		# no builtin support for xpath in python? libxml2, lxml or etree must be installed separately.
+		#xp = '/ArcadeBrowser/emulators/' +emu['emulator'] +'/romlist/rom[@game=\'' +game +'\']'		
+		#nodes = xpath.Evaluate(xp, xmlDoc.documentElement)
+		
+		filenames = []
+							
+		roms = xmlDoc.getElementsByTagName('rom')		
+		for rom in roms:			
+			if rom.getAttribute('game') == self.lstMain.getSelectedItem().getLabel():
+				filename = rom.getAttribute('filename')
+				filenames.append(filename)
+				subroms = rom.getElementsByTagName('subrom')
+				for subrom in subroms:					
+					filename = subrom.getAttribute('filename')
+					filenames.append(filename)
+				#TODO break												
+		
+		
 		cmd = emu['app']
-		if (emu['noescape'] == True):
-			self.note("noescape")
-			cmd = cmd.replace('%ROMPATH%', emu['romdir'])
-			cmd = cmd.replace('%ROM%', rom)
-		else:
-			self.note("DO escape")
-			cmd = cmd.replace('%ROMPATH%', re.escape(emu['romdir']))
-			cmd = cmd.replace('%ROM%', re.escape(rom))
-		cmd = re.escape(HOMEDIR)+'applaunch.sh '+cmd
-		# OF zoiets:
+		fileindex = int(0)
+
+		for fname in filenames:
+			obIndex = cmd.find('{')
+			cbIndex = cmd.find('}')			
+			if obIndex > -1 and cbIndex > 1:
+				replString = cmd[obIndex+1:cbIndex]
+			cmd = cmd.replace("{", "")
+			cmd = cmd.replace("}", "")			
+			if fileindex == 0:
+				if (emu['noescape'] == True):
+					#self.note("noescape")
+					cmd = cmd.replace('%ROMPATH%', emu['romdir'])
+					cmd = cmd.replace('%ROM%', fname)
+				else:
+					#self.note("DO escape")
+					cmd = cmd.replace('%ROMPATH%', re.escape(emu['romdir']))
+					cmd = cmd.replace('%ROM%', re.escape(fname))
+				cmd = cmd.replace('%I%', str(fileindex))
+			else:
+				if (emu['noescape'] == True):
+					#self.note("noescape")
+					newrepl = replString
+					newrepl = newrepl.replace('%ROMPATH%', emu['romdir'])
+					newrepl = newrepl.replace('%ROM%', fname)
+				else:
+					#self.note("DO escape")
+					newrepl = newrepl.replace('%ROMPATH%', re.escape(emu['romdir']))
+					newrepl = newrepl.replace('%ROM%', re.escape(fname))
+				newrepl = newrepl.replace('%I%', str(fileindex))
+				cmd += ' ' +newrepl
+				#self.note(fname +str(fileindex))
+			
+			fileindex += 1
+			#self.note(fname)				
+		
+		# OR something like this:
 		#params = {'app' : emu[app], 'path': romdir, 'rom': filename}
 		#cmd = '%(app)s %(path)s/%(rom)s' % params
 
-		self.txtDesc.setText('Launching '+rom+' ...')
-		#self.txtDesc.setText('Launching '+cmd+' ...') # debug
+		self.txtDesc.setText('Launching '+game+' ...')
+		#self.txtDesc.setText('Launching '+cmd+' ...') # debug		
 
-		# Backup original autoexec.py
-		autoexec = SCRIPTUSR+'/autoexec.py'
-		self.doBackup(autoexec)
+		#self.note("Launch " +emu['solo'])
+		# Solo mode for heavy emulators kills XBMC. We need autoexec.py to restart (XBMC with) Arcade Brower afterwards.
+		if (emu['solo'] == 'true'):
+			# Backup original autoexec.py
+			autoexec = SCRIPTUSR+'/autoexec.py'
+			self.doBackup(autoexec)
 
-		# Write new autoexec.py
-		fh = open(autoexec,'w') # truncate to 0
-		fh.write("import xbmc\n")
-		fh.write("xbmc.executescript('"+HOMEDIR+"default.py')\n")
-		fh.close()
+			# Write new autoexec.py
+			fh = open(autoexec,'w') # truncate to 0
+			fh.write("import xbmc\n")
+			fh.write("xbmc.executescript('"+HOMEDIR+"default.py')\n")
+			fh.close()
 
-		# Remember selection
-		self.saveState()
+			# Remember selection
+			self.saveState()
+			
+			cmd = re.escape(HOMEDIR)+'applaunch.sh '+cmd
 		
 		# Write DEBUG FILE
 		try:
@@ -516,22 +575,47 @@ class ArcadeBrowser(xbmcgui.Window):
 		# Create new list
 		xRoms = xDoc.createElement('romlist')
 
+		romnum = int(0)
+
 		# Insert ROMs in xml
 		for rom in myRoms:
-			self.note(strNote+"... "+self.getProgress())
-			xRom = xDoc.createElement('rom')
-			xRom.setAttribute('filename', rom)
-			#xRom.setAttribute('favorite', 'false')
-			#xRom.setAttribute('blacklist', 'false')
-			#SELFNOTE: Blacklist in easy one-per-line textfile. Human readable = easy to delete them manually.
-			xRomDesc = xDoc.createElement('description')
-			if rom in myDesc:
-				desc = str(myDesc[rom])
+			
+			subrom = False
+			
+			#build friendly romname
+			romname = rom	
+			dpIndex = rom.lower().find(myEmu['diskprefix'].lower())
+			if dpIndex > -1:
+				romname = rom[0:dpIndex]
 			else:
-				desc = 'No Description.'
-			xRomDesc.appendChild(xDoc.createTextNode(desc))
-			xRom.appendChild(xRomDesc)
-			xRoms.appendChild(xRom)
+				dpIndex = rom.lower().find('.' +myEmu['romext'].lower())
+				if dpIndex > -1:
+					romname = rom[0:dpIndex]
+
+			if xRoms.hasChildNodes():				
+				if xRoms.lastChild.attributes['game'].nodeValue == romname:
+					xRom = xDoc.createElement('subrom')
+					xRom.setAttribute('filename', rom)
+					xRom.setAttribute('game', romname)
+					xRoms.lastChild.appendChild(xRom)
+					subrom = True						
+
+			self.note(strNote+"... "+self.getProgress())		
+			if not subrom:
+				xRom = xDoc.createElement('rom')
+				xRom.setAttribute('filename', rom)
+				xRom.setAttribute('game', romname)
+				#xRom.setAttribute('favorite', 'false')
+				#xRom.setAttribute('blacklist', 'false')
+				#SELFNOTE: Blacklist in easy one-per-line textfile. Human readable = easy to delete them manually.
+				xRomDesc = xDoc.createElement('description')
+				if rom in myDesc:
+					desc = str(myDesc[rom])
+				else:
+					desc = 'No Description.'
+				xRomDesc.appendChild(xDoc.createTextNode(desc))
+				xRom.appendChild(xRomDesc)
+				xRoms.appendChild(xRom)				
 
 		xEmu.appendChild(xRoms)
 		xEmus.appendChild(xEmu)
@@ -584,7 +668,6 @@ class ArcadeBrowser(xbmcgui.Window):
 
 	# Debugging purposes
 	def note(self,msg):
-#		if self.debug == 'true':
 		self.lblDebug.setLabel(str(msg))
 		print "Arcade Browser: "+msg
 		return

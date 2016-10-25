@@ -1,12 +1,37 @@
+#Arcade Browser for XBMC/Linux
+
+To my surprise, I was recently asked if I still have the source code to my old XBMC plugin _Arcade Browser_.
+Arcade-browser was a nice GUI for browsing ROMs for multiple emulators using a remote control.
+
+## Changelog
+
+#### 2010 v0.2b3
+
+* Arcade Browser is no longer maintained.
+* See this fork: [Rom Collection Browser](https://github.com/maloep/rom-collection-browser)
+* http://forum.kodi.tv/showthread.php?tid=48983&pid=571066#pid571066
+
+#### 2009 v0.2
+
+* Public release
+* http://forum.kodi.tv/showthread.php?tid=48983
+
+#### 2008 v0.1
+
+* Rom browser for personal use
+
+###Old readme follows.
+
+---
+
 Arcade Browser 0.2b for XBMC *LINUX*!
 ==================
 
 By Sander AKA Redsandro
-http://www.rednet.nl/en/vision/articles/222
+[http://www.rednet.nl/en/vision/articles/222](https://web.archive.org/web/20110817104514/http://www.rednet.nl/en/vision/articles/222)
 
-
-Created:	2008-07-24
-Updated:	2010-01-27
+Created: 2008-07-24  
+Updated: 2010-01-27
 
 Quick notes:
 ------------
@@ -25,7 +50,7 @@ Readme:
 
 I started building a Linux Media Center out of an old Pentium 3 when my laptop - from which I watched movies on television - broke down. And I always wanted to bring my arcade collection to the television in a way that it's actually fon to due. I got me XBMC since my brother recommended it and it saved me a lot of trouble getting MythTV to work. No TV in there, but I could not use the analog TV card anyway since our analog signal is replaced with digital.
 
-XBMC is great. For this script I used 2.1a2-hardy2, as it comes out of the (Synaptic) box, with Ubuntu 8.04.
+XBMC is great. For this script I used `2.1a2-hardy2` as it comes out of the (Synaptic) box, with Ubuntu 8.04.
 No changes. Default skin.
 
 Now for the Arcade part..
@@ -41,7 +66,8 @@ Just check out `emulators.ini` and you'll know what to do.
 Quick setup:
 ------
 
-* Copy everything to `\home\user\.xbmc\scripts\My Scripts\Arcade Browser` and give it write permission. * Note that images go inside `.\images`.
+* Copy everything to `\home\user\.xbmc\scripts\My Scripts\Arcade Browser` and give it write permission.
+  * Note that images go inside `.\images`.
 * Give `/usr/share/XBMC/scripts` write permission for user.
 * Manually edit `emulators.ini`. The file explains itself.
 * Run the script. All ROMs will be indexed according to your `settings.ini`. If anything goes wrong, it's probably your fault.
@@ -63,7 +89,8 @@ Change History:
 * Is there a trick to build long lists faster?
 * If ROM has a description and/or a preview image, display. If not, display emulator pic/desc.
 
-####v0.2b2-2 (2010-01-27)
+####v0.2b3 (2010-01-27)
+* Fixed solo mode
 
 ####v0.2b2 (2009-02-30)
 * Implemented the xml cache.
@@ -81,5 +108,3 @@ Change History:
 
 ####0.1b (2008-07-07)
 * Initial version, browsing directly from disk.
-
-
